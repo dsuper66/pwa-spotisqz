@@ -1,0 +1,30 @@
+:host {
+  display: block;
+  max-width: 600px;
+  margin: auto;
+  padding: 16px;
+  font-family: system-ui, sans-serif;
+}
+
+.track-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+}
+
+.track {
+  aspect-ratio: 1;
+  padding: 6px;
+  border: 1px solid #8ba8bf;
+  border-radius: 0;
+  background: #c5e1f9;
+  color: #17212b;
+  font: inherit;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.track.selected {
+  background: #f3a8af;
+}
