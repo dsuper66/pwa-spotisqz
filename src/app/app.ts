@@ -1,8 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { SpotifyAuthService } from './spotify-auth.service';
+
 import {
   SpotifyApiService,
   SpotifyPlaylist,
+  SpotifyTrack,
 } from './spotify-api.service';
 
 @Component({
@@ -21,21 +23,8 @@ export class App {
   playlistStatus = signal('');
   loadingPlaylists = signal(false);
 
-  // Sample tracks remain until we implement loading a playlist's tracks.
-  tracks = [
-    'E-Bow the Letter',
-    "What's the Frequency, Kenneth?",
-    'Stand',
-    'Strange Currencies',
-    'Losing My Religion',
-    'Nightswimming',
-    'Find the River',
-    'Everybody Hurts',
-    'Driver 8',
-    'Orange Crush',
-    'Man on the Moon',
-    'Perfect Circle',
-  ];
+  // Initially empty; populated when we select a playlist.
+  tracks = signal<SpotifyTrack[]>([]);
 
   // null means no track has been selected.
   selectedIndex = signal<number | null>(null);
@@ -63,4 +52,27 @@ export class App {
       this.loadingPlaylists.set(false);
     }
   }
+
+  // Load the chosen playlist and display its tracks.
+  async selectPlaylist(playlist: SpotifyPlaylist): Promise<void> {
+    this.playlistStatus.set(`Loading tracks from ${playlist.name}…`);
+
+    // Clear the old grid and its selected square.
+    this.tracks.set([]);
+    this.selectedIndex.set(null);
+
+    try {
+      const tracks = await this.api.getPlaylistTracks(playlist.id);
+
+      // Updating the signal causes Angular to redraw the grid.
+      this.tracks.set(tracks);
+
+      this.playlistStatus.set(
+        `${playlist.name}: ${tracks.length} playlist entries loaded`
+      );
+    } catch (error) {
+      this.playlistStatus.set(String(error));
+    }
+  }
+
 }

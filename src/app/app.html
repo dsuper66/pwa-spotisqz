@@ -15,28 +15,33 @@
 <!-- Read the signal to display progress, success or an error. -->
 <p>{{ playlistStatus() }}</p>
 
-<!-- Display the retrieved playlists as a simple list for now. -->
 <ul>
-  <!-- Use each playlist's unique ID to identify its rendered entry. -->
   @for (playlist of playlists(); track playlist.id) {
-    <li>{{ playlist.name }}</li>
+    <li>
+      <!-- Clicking passes this playlist to our selection method. -->
+      <button (click)="selectPlaylist(playlist)">
+        {{ playlist.name }}
+      </button>
+    </li>
   }
 </ul>
 
 <div class="track-grid">
-  @for (track of tracks; track $index) {
+  <!-- Use position because a playlist can contain duplicate tracks. -->
+  @for (track of tracks(); track $index) {
     <button
       class="track"
       [class.selected]="selectedIndex() === $index"
       (click)="selectedIndex.set($index)"
     >
-      {{ track }}
+      {{ track.name }}
     </button>
   }
 </div>
 
 @if (selectedIndex() !== null) {
-  <p>{{ tracks[selectedIndex()!] }}</p>
-} @else {
+  <!-- The exclamation mark tells TypeScript we have checked for null. -->
+  <p>{{ tracks()[selectedIndex()!].name }}</p>
+} @else if (tracks().length > 0) {
   <p>Tap a track.</p>
 }
