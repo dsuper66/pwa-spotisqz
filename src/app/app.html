@@ -5,10 +5,7 @@
 
 <!-- Clicking invokes the method defined in app.ts.
      Disable the button while a request is in progress. -->
-<button
-  (click)="loadPlaylists()"
-  [disabled]="loadingPlaylists()"
->
+<button (click)="loadPlaylists()" [disabled]="loadingPlaylists()">
   Load playlists
 </button>
 
@@ -17,31 +14,31 @@
 
 <ul>
   @for (playlist of playlists(); track playlist.id) {
-    <li>
-      <!-- Clicking passes this playlist to our selection method. -->
-      <button (click)="selectPlaylist(playlist)">
-        {{ playlist.name }}
-      </button>
-    </li>
+  <li>
+    <!-- Clicking passes this playlist to our selection method. -->
+    <button (click)="selectPlaylist(playlist)">
+      {{ playlist.name }}
+    </button>
+  </li>
   }
 </ul>
 
 <div class="track-grid">
   <!-- Use position because a playlist can contain duplicate tracks. -->
   @for (track of tracks(); track $index) {
-    <button
-      class="track"
-      [class.selected]="selectedIndex() === $index"
-      (click)="selectedIndex.set($index)"
-    >
-      {{ track.name }}
-    </button>
+  <button class="track" [class.selected]="selectedIndex() === $index" (click)="playTrack($index)"
+    [disabled]="startingPlayback()">
+    {{ track.name }}
+  </button>
   }
 </div>
 
+<!-- Show playback progress or any error returned by Spotify. -->
+<p>{{ playbackStatus() }}</p>
+
 @if (selectedIndex() !== null) {
-  <!-- The exclamation mark tells TypeScript we have checked for null. -->
-  <p>{{ tracks()[selectedIndex()!].name }}</p>
+<!-- The exclamation mark tells TypeScript we have checked for null. -->
+<p>{{ tracks()[selectedIndex()!].name }}</p>
 } @else if (tracks().length > 0) {
-  <p>Tap a track.</p>
+<p>Tap a track.</p>
 }

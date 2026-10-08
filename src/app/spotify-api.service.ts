@@ -21,6 +21,9 @@ interface PlaylistPage {
 interface SpotifyItem {
   name: string;
   uri: string;
+
+  // Optional because Spotify may omit this field.
+  is_playable?: boolean;
 }
 
 // Each playlist entry wraps its track or episode in an object.
@@ -98,49 +101,97 @@ export class SpotifyApiService {
     return playlists;
   }
 
-// Retrieve all playlist entries, preserving their original order.
-async getPlaylistTracks(playlistId: string): Promise<SpotifyTrack[]> {
-  const token = this.auth.accessToken;
+  // Retrieve all playlist entries, preserving their original order.
+  async getPlaylistTracks(playlistId: string): Promise<SpotifyTrack[]> {
+    const token = this.auth.accessToken;
 
-  if (!token) {
-    throw new Error('Connect Spotify first.');
+    if (!token) {
+      throw new Error('Connect Spotify first.');
+    }
+
+    const tracks: SpotifyTrack[] = [];
+
+    //let url: string | null =
+    //`https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items?limit=50`;
+    let url: string | null =
+      `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items?limit=50&market=from_token`;
+
+    // Keep fetching until Spotify returns no next-page URL.
+    while (url) {
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Track request failed (${response.status})`);
+      }
+
+      const page: PlaylistItemsPage = await response.json();
+
+      for (const entry of page.items) {
+        const item = entry?.item ?? entry?.track;
+
+        // Omit missing entries and tracks explicitly marked unplayable.
+        // An omitted is_playable field does not mean false.
+        if (!item || item.is_playable === false) {
+          continue;
+        }
+
+        tracks.push({
+          name: item.name,
+          uri: item.uri,
+        });
+      }
+
+      url = page.next;
+    }
+
+    return tracks;
   }
 
-  const tracks: SpotifyTrack[] = [];
+  // Start the playlist track at the chosen position on the active Spotify device.
+  async playPlaylistTrack(
+    playlistUri: string,
+    index: number
+  ): Promise<void> {
+    const token = this.auth.accessToken;
 
-  let url: string | null =
-    `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items?limit=50`;
+    if (!token) {
+      throw new Error('Connect Spotify first.');
+    }
 
-  // Keep fetching until Spotify returns no next-page URL.
-  while (url) {
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await fetch(
+      'https://api.spotify.com/v1/me/player/play',
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          // The playlist supplies the context for subsequent tracks.
+          context_uri: playlistUri,
+
+          // Positions start at zero, just like our grid's $index.
+          offset: { position: index },
+
+          // Start at the beginning of the chosen track.
+          position_ms: 0,
+        }),
+      }
+    );
 
     if (!response.ok) {
-      throw new Error(`Track request failed (${response.status})`);
+      const detail = await response.text();
+
+      throw new Error(
+        `Playback request failed (${response.status}): ${detail}`
+      );
     }
 
-    const page: PlaylistItemsPage = await response.json();
-
-    for (const entry of page.items) {
-      // Support both the current and older response field names.
-      const item = entry?.item ?? entry?.track;
-
-      // Keep a square even if a track is unavailable.
-      // This preserves the playlist positions for playback later.
-      tracks.push({
-        name: item?.name ?? 'Unavailable track',
-        uri: item?.uri ?? null,
-      });
-    }
-
-    url = page.next;
+    // Successful playback requests return no JSON body.
   }
-
-  return tracks;
-}
 
 }
