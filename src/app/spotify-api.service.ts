@@ -46,6 +46,18 @@ export interface SpotifyTrack {
   uri: string | null;
 }
 
+// Only the playback fields we currently need.
+// Context and item can be absent, for example during an advert.
+export interface SpotifyPlaybackState {
+  is_playing: boolean;
+  context: { uri: string } | null;
+  item: {
+    name: string;
+    uri: string;
+    linked_from?: { uri: string };
+  } | null;
+}
+
 // Angular creates one shared instance of this service for the app.
 @Injectable({ providedIn: 'root' })
 export class SpotifyApiService {
@@ -192,6 +204,36 @@ export class SpotifyApiService {
     }
 
     // Successful playback requests return no JSON body.
+  }
+
+  // Read Spotify's current playback without changing it.
+  async getPlaybackState(): Promise<SpotifyPlaybackState | null> {
+    const token = this.auth.accessToken;
+
+    if (!token) {
+      throw new Error('Connect Spotify first.');
+    }
+
+    const response = await fetch('https://api.spotify.com/v1/me/player', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    // Spotify can return an empty response when no playback is available.
+    if (response.status === 204) {
+      return null;
+    }
+
+    if (!response.ok) {
+      const detail = await response.text();
+
+      throw new Error(
+        `Playback state request failed (${response.status}): ${detail}`
+      );
+    }
+
+    return await response.json();
   }
 
 }

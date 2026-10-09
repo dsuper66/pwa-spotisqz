@@ -23,11 +23,18 @@
   }
 </ul>
 
+<button
+  (click)="refreshPlayback()"
+  [disabled]="refreshingPlayback()"
+>
+  Refresh playback
+</button>
+
 <div class="track-grid">
   <!-- Use position because a playlist can contain duplicate tracks. -->
   @for (track of tracks(); track $index) {
-  <button class="track" [class.selected]="selectedIndex() === $index" (click)="playTrack($index)"
-    [disabled]="startingPlayback()">
+  <button class="track-square" [class.selected]="selectedIndex() === $index" (click)="playTrack($index)"
+    [disabled]="startingPlayback()" [class.playing]="playingIndex() === $index">
     {{ track.name }}
   </button>
   }

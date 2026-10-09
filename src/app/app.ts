@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { SpotifyAuthService } from './spotify-auth.service';
 
 import {
@@ -36,9 +36,30 @@ export class App {
   playbackStatus = signal('');
   startingPlayback = signal(false);
 
+  // Separate the current playback position from the clicked selection.
+  playingIndex = signal<number | null>(null);
+  refreshingPlayback = signal(false);
+
   constructor() {
-    // If Spotify has returned us to /callback, complete the login.
+    // Finish login if Spotify has redirected us back to the app.
     void this.auth.handleCallback();
+
+    // Check playback every five seconds while the app is visible.
+    const timer = window.setInterval(() => {
+      if (
+        this.auth.accessToken &&
+        document.visibilityState === 'visible' &&
+        !this.startingPlayback()
+      ) {
+        // refreshPlayback already prevents overlapping refresh requests.
+        void this.refreshPlayback();
+      }
+    }, 5000);
+
+    // Stop the timer when Angular destroys this component.
+    inject(DestroyRef).onDestroy(() => {
+      window.clearInterval(timer);
+    });
   }
 
   // Called by the Load playlists button in app.html.
@@ -71,6 +92,7 @@ export class App {
     // Clear the old grid and its selected square.
     this.tracks.set([]);
     this.selectedIndex.set(null);
+    this.playingIndex.set(null);
 
     try {
       const tracks = await this.api.getPlaylistTracks(playlist.id);
@@ -119,6 +141,54 @@ export class App {
       this.playbackStatus.set(String(error));
     } finally {
       this.startingPlayback.set(false);
+    }
+  }
+
+  // Match Spotify's current track to the displayed playlist.
+  async refreshPlayback(): Promise<void> {
+    if (this.refreshingPlayback()) {
+      return;
+    }
+
+    this.refreshingPlayback.set(true);
+
+    try {
+      const state = await this.api.getPlaybackState();
+      const playlist = this.selectedPlaylist();
+
+      // Clear the previous highlight before interpreting the response.
+      this.playingIndex.set(null);
+
+      if (!state?.item) {
+        this.playbackStatus.set('No current track reported by Spotify.');
+        return;
+      }
+
+      const item = state.item;
+
+      this.playbackStatus.set(
+        `${state.is_playing ? 'Playing' : 'Paused'}: ${item.name}`
+      );
+
+      // Only highlight our grid if Spotify is using this playlist.
+      if (!playlist || state.context?.uri !== playlist.uri) {
+        return;
+      }
+
+      // Relinking can substitute another recording's URI.
+      const index = this.tracks().findIndex(
+        track =>
+          track.uri === item.uri ||
+          track.uri === item.linked_from?.uri
+      );
+
+      if (index >= 0) {
+        this.playingIndex.set(index);
+      }
+    } catch (error) {
+      this.playbackStatus.set(String(error));
+    } finally {
+      this.refreshingPlayback.set(false);
     }
   }
 
