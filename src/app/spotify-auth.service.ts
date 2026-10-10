@@ -3,10 +3,19 @@ import { Injectable, signal } from '@angular/core';
 @Injectable({ providedIn: 'root' })
 export class SpotifyAuthService {
   private clientId = '75adfe1e725a4804817d98c2c340d5af';
-  private redirectUri = 'http://127.0.0.1:4200/callback';
 
-  status = signal('Not connected');
-  accessToken: string | null = null;
+  // Return to whichever address we used to open the app.
+  // Works with both the Mac's local address and an HTTPS tunnel.
+  private redirectUri = `${window.location.origin}/callback`;
+
+  // Restore the token if this browser tab reloads.
+  accessToken: string | null =
+    sessionStorage.getItem('spotify-access-token');
+
+  // Indicate whether we restored a token or need to connect.
+  status = signal(
+    this.accessToken ? 'Spotify token restored' : 'Not connected'
+  );
 
   private randomString(): string {
     return Array.from(crypto.getRandomValues(new Uint8Array(32)))
@@ -46,6 +55,10 @@ export class SpotifyAuthService {
           'playlist-read-collaborative',
           'user-read-playback-state',
           'user-modify-playback-state',
+          // Permissions for playing audio inside the browser.
+          'streaming',
+          'user-read-email',
+          'user-read-private',
         ].join(' '),
       });
 
@@ -105,7 +118,15 @@ export class SpotifyAuthService {
       if (!tokens.access_token) throw new Error('No access token returned.');
 
       this.accessToken = tokens.access_token;
+
+      // Preserve the token through reloads in this tab.
+      sessionStorage.setItem(
+        'spotify-access-token',
+        tokens.access_token
+      );
+
       this.status.set('Connected to Spotify');
+
     } catch (error) {
       this.status.set(`Connection failed: ${String(error)}`);
     } finally {

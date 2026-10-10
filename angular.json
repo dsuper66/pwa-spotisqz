@@ -25,7 +25,9 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css"]
+            "styles": [
+              "src/styles.css"
+            ]
           },
           "configurations": {
             "production": {
@@ -53,6 +55,11 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "allowedHosts": [
+              "getup-hasty-spry.ngrok-free.dev"
+            ]
+          },
           "configurations": {
             "production": {
               "buildTarget": "spotisqz:build:production"

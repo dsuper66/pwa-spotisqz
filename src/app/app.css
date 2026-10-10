@@ -8,21 +8,55 @@
 
 .track-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  width: 100%;
+
+  /* Keep the playlist area within a portion of the window. */
+  height: 65dvh;
+
   gap: 2px;
+  align-content: start;
+
+  /* Scroll when the tiles need more height than is available. */
+  overflow-y: auto;
+
+  /* Reserve scrollbar space so its appearance does not shift columns. */
+  scrollbar-gutter: stable;
 }
 
 .track-square {
-  aspect-ratio: 1;
-  padding: 6px;
+  /* Explicit grid row heights now determine the tile proportions. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 2px;
   border: 1px solid #8ba8bf;
   border-radius: 0;
   background: #c5e1f9;
   color: #17212b;
+
   font: inherit;
-  font-size: 13px;
+  font-size: 10px;
+  line-height: 1.15;
+
+  /* Wrap long titles, but keep their text inside the tile. */
   overflow-wrap: anywhere;
+  overflow: hidden;
+
+  /* Let the grid determine size rather than the title length. */
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+
   cursor: pointer;
+}
+
+.track-label {
+  /* Centre short titles vertically; clip titles taller than the tile. */
+  display: block;
+  max-height: 100%;
+  overflow: hidden;
+  text-align: center;
 }
 
 .track-square.selected {
@@ -32,4 +66,49 @@
 /* Green marks the current track, including when paused. */
 .track-square.playing {
   background: #a6dfb4;
+}
+
+.playlist-grid {
+  display: grid;
+
+  /* Adjust the number of columns to the available screen width. */
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 6px;
+}
+
+.playlist-tile {
+  /* Portrait tiles, with the playlist name centred. */
+  aspect-ratio: 4 / 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 6px;
+  border: 1px solid #8ba8bf;
+  background: #c5e1f9;
+  color: #17212b;
+
+  font: inherit;
+  font-size: 12px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+/* Keep the messages together without large paragraph gaps. */
+.status-messages {
+  margin-bottom: 12px;
+}
+
+.status-messages p {
+  margin: 4px 0;
+}
+
+/* Keep the playback controls together and allow wrapping on narrow screens. */
+.playback-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-block: 12px;
 }

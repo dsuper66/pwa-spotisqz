@@ -58,6 +58,15 @@ export interface SpotifyPlaybackState {
   } | null;
 }
 
+// A Spotify player that our app may be able to control.
+export interface SpotifyDevice {
+  id: string | null;
+  name: string;
+  type: string;
+  is_active: boolean;
+  is_restricted: boolean;
+}
+
 // Angular creates one shared instance of this service for the app.
 @Injectable({ providedIn: 'root' })
 export class SpotifyApiService {
@@ -234,6 +243,31 @@ export class SpotifyApiService {
     }
 
     return await response.json();
+  }
+
+  // List available players without changing playback.
+  async getDevices(): Promise<SpotifyDevice[]> {
+    const token = this.auth.accessToken;
+
+    if (!token) {
+      throw new Error('Connect Spotify first.');
+    }
+
+    const response = await fetch(
+      'https://api.spotify.com/v1/me/player/devices',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Device request failed (${response.status})`);
+    }
+
+    const data: { devices: SpotifyDevice[] } = await response.json();
+    return data.devices;
   }
 
 }

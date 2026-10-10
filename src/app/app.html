@@ -1,7 +1,49 @@
 <h1>SpotiSqz</h1>
 
+<!-- Keep connection, loading and playback messages above the controls. -->
+<div class="status-messages" aria-live="polite">
+
+  <!--MESSAGES-->
+  <p>{{ auth.status() }}</p>
+
+  @if (playlistStatus()) {
+  <p>{{ playlistStatus() }}</p>
+  }
+
+  @if (playbackStatus()) {
+  <p>{{ playbackStatus() }}</p>
+  }
+
+  @if (selectedIndex() !== null) {
+  <!-- Display the full title even when its tile label is clipped. -->
+  <p>Selected: {{ tracks()[selectedIndex()!].name }}</p>
+  } @else if (tracks().length > 0) {
+  <p>Tap a track.</p>
+  }
+
+  @if (restoringDisplay()) {
+  <p>Restoring display…</p>
+  }
+
+  @if (deviceStatus()) {
+  <p>{{ deviceStatus() }}</p>
+  }
+
+  @if (browserPlayerStatus()) {
+  <p>{{ browserPlayerStatus() }}</p>
+  }
+</div>
+
+<!-- DEV MSG Keep the layout measurements visible while developing. -->
+<p>
+  Tracks: {{ tracks().length }},
+  width: {{ gridSize().width }},
+  height: {{ gridSize().height }},
+  columns: {{ gridColumns() }}
+</p>
+
+<!-- BUTTONS-->
 <button (click)="auth.login()">Connect Spotify</button>
-<p>{{ auth.status() }}</p>
 
 <!-- Clicking invokes the method defined in app.ts.
      Disable the button while a request is in progress. -->
@@ -9,43 +51,95 @@
   Load playlists
 </button>
 
-<!-- Read the signal to display progress, success or an error. -->
-<p>{{ playlistStatus() }}</p>
-
-<ul>
-  @for (playlist of playlists(); track playlist.id) {
-  <li>
-    <!-- Clicking passes this playlist to our selection method. -->
-    <button (click)="selectPlaylist(playlist)">
-      {{ playlist.name }}
-    </button>
-  </li>
-  }
-</ul>
-
-<button
-  (click)="refreshPlayback()"
-  [disabled]="refreshingPlayback()"
->
-  Refresh playback
+<!-- A temporary diagnostic button; does not start or stop music. -->
+<button (click)="checkDevices()" [disabled]="checkingDevices()">
+  Check devices
 </button>
 
-<div class="track-grid">
-  <!-- Use position because a playlist can contain duplicate tracks. -->
-  @for (track of tracks(); track $index) {
-  <button class="track-square" [class.selected]="selectedIndex() === $index" (click)="playTrack($index)"
-    [disabled]="startingPlayback()" [class.playing]="playingIndex() === $index">
-    {{ track.name }}
+@if (selectedPlaylist(); as playlist) {
+<button (click)="showPlaylists()">Back to playlists</button>
+
+<!--spotify api
+<button (click)="enableBrowserPlayer()" [disabled]="browserPlayerLoading() || browserDeviceId() !== null">
+  Enable browser player
+</button>
+
+<button (click)="pauseBrowserAudio()" [disabled]="!browserDeviceId()">
+  Pause browser audio
+</button>
+
+<button (click)="resumeBrowserAudio()" [disabled]="!browserDeviceId()">
+  Resume browser audio
+</button>
+-->
+
+<div class="playback-controls">
+  <button
+    (click)="previousBrowserTrack()"
+    [disabled]="!browserDeviceId()"
+  >
+    Previous
   </button>
-  }
+
+  <!-- Play resumes the current track; tapping a tile starts that track. -->
+  <button
+    (click)="resumeBrowserAudio()"
+    [disabled]="!browserDeviceId()"
+  >
+    Play
+  </button>
+
+  <button
+    (click)="pauseBrowserAudio()"
+    [disabled]="!browserDeviceId()"
+  >
+    Pause
+  </button>
+
+  <button
+    (click)="nextBrowserTrack()"
+    [disabled]="!browserDeviceId()"
+  >
+    Next
+  </button>
 </div>
 
-<!-- Show playback progress or any error returned by Spotify. -->
-<p>{{ playbackStatus() }}</p>
-
-@if (selectedIndex() !== null) {
-<!-- The exclamation mark tells TypeScript we have checked for null. -->
-<p>{{ tracks()[selectedIndex()!].name }}</p>
-} @else if (tracks().length > 0) {
-<p>Tap a track.</p>
+<!-- Keep a retry available if automatic player setup fails. -->
+@if (!browserDeviceId()) {
+  <button
+    (click)="enableBrowserPlayer()"
+    [disabled]="browserPlayerLoading()"
+  >
+    {{ browserPlayerLoading() ? 'Preparing player…' : 'Retry player connection' }}
+  </button>
 }
+
+<!--PLAYLIST NAME-->
+<h2>{{ playlist.name }}</h2>
+}
+
+
+
+<!-- GRID (playlists or tracks)-->
+<!-- One measured grid, shared by playlists and tracks. -->
+<div #trackGrid class="track-grid" [style.grid-template-columns]="'repeat(' + gridColumns() + ', minmax(0, 1fr))'"
+  [style.grid-auto-rows.px]="gridTileHeight()">
+  @if (showingPlaylists()) {
+  @for (playlist of playlists(); track playlist.id) {
+  <!-- Reuse the track tile appearance and dimensions. -->
+  <button class="track-square" (click)="selectPlaylist(playlist)">
+    <span class="track-label">{{ playlist.name }}</span>
+  </button>
+  }
+  } @else {
+  <!-- Position identifies entries when a track appears more than once. -->
+  @for (track of tracks(); track $index) {
+  <button class="track-square" 
+    [class.playing]="playingIndex() === $index"
+    [disabled]="startingPlayback()" 
+    (click)="playTrack($index)">
+    <span class="track-label">{{ track.name }}</span>
+  </button>
+  }
+  }
+</div>
